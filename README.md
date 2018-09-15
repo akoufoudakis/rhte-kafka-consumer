@@ -22,24 +22,24 @@ public KStream<?, ?> processIncomingStream(KStreamBuilder streamBuilder) {
 int LEGAL_TRANS = 0;
 int ILLEGAL_TRANS = 1;
 
-	KStream<String, CreditCardTransaction> stream = streamBuilder.stream(kafkaTopic);
+KStream<String, CreditCardTransaction> stream = streamBuilder.stream(kafkaTopic);
 
-	KStream<String, CreditCardTransaction>[] branchCountriesStream =stream.branch(TransactionPatterns.allowedCountries,TransactionPatterns.bannedCountries);
-	branchCountriesStream[ILLEGAL_TRANS].to("illegal-trans");
+KStream<String, CreditCardTransaction>[] branchCountriesStream =stream.branch(TransactionPatterns.allowedCountries,TransactionPatterns.bannedCountries);
+branchCountriesStream[ILLEGAL_TRANS].to("illegal-trans");
 
-	KStream<String, CreditCardTransaction>[] branchTimeOfDayStream =branchCountriesStream[LEGAL_TRANS].branch(TransactionPatterns.ValidHourOfDay,TransactionPatterns.InvalidHourOfDay);
-	branchTimeOfDayStream[ILLEGAL_TRANS].to("illegal-trans");
-	stream = branchCountriesStream[LEGAL_TRANS];
+KStream<String, CreditCardTransaction>[] branchTimeOfDayStream =branchCountriesStream[LEGAL_TRANS].branch(TransactionPatterns.ValidHourOfDay,TransactionPatterns.InvalidHourOfDay);
+branchTimeOfDayStream[ILLEGAL_TRANS].to("illegal-trans");
+stream = branchCountriesStream[LEGAL_TRANS];
 
 
 
-	CreditCardTransactionPartitioner streamPartitioner = new CreditCardTransactionPartitioner();
+CreditCardTransactionPartitioner streamPartitioner = new CreditCardTransactionPartitioner();
 
-	//stream.through("by-cc-trans", Produced.with(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner)).to("processed");
+//stream.through("by-cc-trans", Produced.with(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner)).to("processed");
 
-	stream.to(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner,"by-cc-trans");
+stream.to(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner,"by-cc-trans");
 
-	return stream;
+return stream;
 }
 ```
 - using Processor API
@@ -49,12 +49,12 @@ int ILLEGAL_TRANS = 1;
 public KafkaStreams processTransactionsByCreditCardIDStream(TopologyBuilder topologyBuilder,StreamsConfig streamingConfig) {
 
 
-	StateStoreSupplier<KeyValueStore<String, Integer>>  storeSupplier =Stores.create(ccTransactionsStateStoreName)
-		    .withKeys(Serdes.String())
-		    .withValues(Serdes.Integer())
-		    .persistent()
-		    .build();
-	topologyBuilder.addSource(AutoOffsetReset.EARLIEST,"by-cc-trans-source", new WallclockTimestampExtractor(),Serdes.String().deserializer(),StreamsSerdes.CreditCardTransactionSerde().deserializer(),"by-cc-trans")//
+StateStoreSupplier<KeyValueStore<String, Integer>>  storeSupplier =Stores.create(ccTransactionsStateStoreName)
+	    .withKeys(Serdes.String())
+	    .withValues(Serdes.Integer())
+	    .persistent()
+	    .build();
+topologyBuilder.addSource(AutoOffsetReset.EARLIEST,"by-cc-trans-source", new WallclockTimestampExtractor(),Serdes.String().deserializer(),StreamsSerdes.CreditCardTransactionSerde().deserializer(),"by-cc-trans")//
 
 //
 .addProcessor("ACCUMLATORPROCESSOR", CreditCardTransactionAccumulatorProcessor::new, "by-cc-trans-source")//
