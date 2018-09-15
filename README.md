@@ -72,14 +72,8 @@ The second part is the stateful one, it reparation the filtered record based on 
 	}
 ```
 # To run it locally (Not on OCP)
-1. Create the required topics on your kafka server
-```sh
-$ cd rhte-kafka-consumer
-$ sh create-topics.sh 
-```
-2. There is also a shell script to delete the topics just in case they are created before
-3. Set the application properties to the correct values including the numberofCreditCard you want the producer to generate
-4. run the application using the spring boot mvn plugin
+1. Set the application properties to the correct values
+2. run the application using the spring boot mvn plugin
 ```sh
 [rhte-kafka-consumer]$ mvn spring-boot:run
 ```
