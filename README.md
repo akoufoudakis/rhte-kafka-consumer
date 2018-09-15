@@ -17,59 +17,59 @@ The second part is the stateful one, it reparation the filtered record based on 
 - using DSL
 ```java
 @SuppressWarnings({"deprecation","unchecked"})
-	@Bean
-	public KStream<?, ?> processIncomingStream(KStreamBuilder streamBuilder) {
-		int LEGAL_TRANS = 0;
-        int ILLEGAL_TRANS = 1;
-        
-		KStream<String, CreditCardTransaction> stream = streamBuilder.stream(kafkaTopic);
-		
-		KStream<String, CreditCardTransaction>[] branchCountriesStream =stream.branch(TransactionPatterns.allowedCountries,TransactionPatterns.bannedCountries);
-		branchCountriesStream[ILLEGAL_TRANS].to("illegal-trans");
-		
-		KStream<String, CreditCardTransaction>[] branchTimeOfDayStream =branchCountriesStream[LEGAL_TRANS].branch(TransactionPatterns.ValidHourOfDay,TransactionPatterns.InvalidHourOfDay);
-		branchTimeOfDayStream[ILLEGAL_TRANS].to("illegal-trans");
-		stream = branchCountriesStream[LEGAL_TRANS];
-		
+@Bean
+public KStream<?, ?> processIncomingStream(KStreamBuilder streamBuilder) {
+int LEGAL_TRANS = 0;
+int ILLEGAL_TRANS = 1;
 
-		
-		CreditCardTransactionPartitioner streamPartitioner = new CreditCardTransactionPartitioner();
+	KStream<String, CreditCardTransaction> stream = streamBuilder.stream(kafkaTopic);
 
-		//stream.through("by-cc-trans", Produced.with(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner)).to("processed");
+	KStream<String, CreditCardTransaction>[] branchCountriesStream =stream.branch(TransactionPatterns.allowedCountries,TransactionPatterns.bannedCountries);
+	branchCountriesStream[ILLEGAL_TRANS].to("illegal-trans");
 
-		stream.to(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner,"by-cc-trans");
+	KStream<String, CreditCardTransaction>[] branchTimeOfDayStream =branchCountriesStream[LEGAL_TRANS].branch(TransactionPatterns.ValidHourOfDay,TransactionPatterns.InvalidHourOfDay);
+	branchTimeOfDayStream[ILLEGAL_TRANS].to("illegal-trans");
+	stream = branchCountriesStream[LEGAL_TRANS];
 
-		return stream;
-	}
+
+
+	CreditCardTransactionPartitioner streamPartitioner = new CreditCardTransactionPartitioner();
+
+	//stream.through("by-cc-trans", Produced.with(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner)).to("processed");
+
+	stream.to(Serdes.String(), StreamsSerdes.CreditCardTransactionSerde(), streamPartitioner,"by-cc-trans");
+
+	return stream;
+}
 ```
 - using Processor API
 ```java
-	@SuppressWarnings({"deprecation","unchecked"})
-	@Bean
-	public KafkaStreams processTransactionsByCreditCardIDStream(TopologyBuilder topologyBuilder,StreamsConfig streamingConfig) {
-		
-		
-		StateStoreSupplier<KeyValueStore<String, Integer>>  storeSupplier =Stores.create(ccTransactionsStateStoreName)
-			    .withKeys(Serdes.String())
-			    .withValues(Serdes.Integer())
-			    .persistent()
-			    .build();
-		topologyBuilder.addSource(AutoOffsetReset.EARLIEST,"by-cc-trans-source", new WallclockTimestampExtractor(),Serdes.String().deserializer(),StreamsSerdes.CreditCardTransactionSerde().deserializer(),"by-cc-trans")//
-		
-        //
-        .addProcessor("ACCUMLATORPROCESSOR", CreditCardTransactionAccumulatorProcessor::new, "by-cc-trans-source")//
-        .addProcessor("ACCUMLATORFILTERPROCESSOR",CreditCardTransactionAccumulatorFilterProcessor::new , "ACCUMLATORPROCESSOR")
-        // connect the state store "COUNTS" with processor "ACCUMLATORPROCESSOR"  
-        .addStateStore(storeSupplier, //
-                "ACCUMLATORPROCESSOR")//
-        .connectProcessorAndStateStores("ACCUMLATORPROCESSOR", ccTransactionsStateStoreName)
-        //
-        .addSink("SINK1", "processed",Serdes.String().serializer(),StreamsSerdes.CreditCardTransactionSerde().serializer(), "ACCUMLATORFILTERPROCESSOR")
-		.addSink("SINK2", "illegal-trans",Serdes.String().serializer(),StreamsSerdes.CreditCardTransactionSerde().serializer(), "ACCUMLATORFILTERPROCESSOR");
-       
-		KafkaStreams streaming = new KafkaStreams(topologyBuilder, streamingConfig);
-		return streaming;
-	}
+@SuppressWarnings({"deprecation","unchecked"})
+@Bean
+public KafkaStreams processTransactionsByCreditCardIDStream(TopologyBuilder topologyBuilder,StreamsConfig streamingConfig) {
+
+
+	StateStoreSupplier<KeyValueStore<String, Integer>>  storeSupplier =Stores.create(ccTransactionsStateStoreName)
+		    .withKeys(Serdes.String())
+		    .withValues(Serdes.Integer())
+		    .persistent()
+		    .build();
+	topologyBuilder.addSource(AutoOffsetReset.EARLIEST,"by-cc-trans-source", new WallclockTimestampExtractor(),Serdes.String().deserializer(),StreamsSerdes.CreditCardTransactionSerde().deserializer(),"by-cc-trans")//
+
+//
+.addProcessor("ACCUMLATORPROCESSOR", CreditCardTransactionAccumulatorProcessor::new, "by-cc-trans-source")//
+.addProcessor("ACCUMLATORFILTERPROCESSOR",CreditCardTransactionAccumulatorFilterProcessor::new , "ACCUMLATORPROCESSOR")
+// connect the state store "COUNTS" with processor "ACCUMLATORPROCESSOR"  
+.addStateStore(storeSupplier, //
+	"ACCUMLATORPROCESSOR")//
+.connectProcessorAndStateStores("ACCUMLATORPROCESSOR", ccTransactionsStateStoreName)
+//
+.addSink("SINK1", "processed",Serdes.String().serializer(),StreamsSerdes.CreditCardTransactionSerde().serializer(), "ACCUMLATORFILTERPROCESSOR")
+	.addSink("SINK2", "illegal-trans",Serdes.String().serializer(),StreamsSerdes.CreditCardTransactionSerde().serializer(), "ACCUMLATORFILTERPROCESSOR");
+
+	KafkaStreams streaming = new KafkaStreams(topologyBuilder, streamingConfig);
+	return streaming;
+}
 ```
 # To run it locally (Not on OCP)
 1. Set the application properties to the correct values
