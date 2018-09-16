@@ -32,7 +32,6 @@ public class CreditCardAccumaltorTransformer implements ValueTransformer<CreditC
     	CreditCardTransactionAccumulator ccAccumulator = CreditCardTransactionAccumulator.from(value);
     	        
     	Integer accumulatedSoFar = stateStore.get(ccAccumulator.getCreditCardId());
-    	System.out.println("stateStore=="+stateStore);
 
         if (accumulatedSoFar != null) {
         	ccAccumulator.addTransactions();

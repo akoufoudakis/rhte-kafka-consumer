@@ -38,7 +38,6 @@ public class TransactionPatterns {
 	}
 
 	public static boolean isExceedMaxNumerofTransactions(Integer noOfTrans) {
-		System.out.println("isExceedMaxNumerofTransactions noOfTrans==" + noOfTrans);
 		return noOfTrans > 15;
 	}
 }
