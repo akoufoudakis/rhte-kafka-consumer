@@ -226,6 +226,9 @@
 		</profile>
 		<profile>
 			<id>openshift</id>
+			<properties>
+				<spring.profiles.active>openshift</spring.profiles.active>
+			</properties>
 			<build>
 				<plugins>
 					<plugin>
