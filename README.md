@@ -81,3 +81,10 @@ topologyBuilder.addSource(AutoOffsetReset.EARLIEST,"by-cc-trans-source", new Wal
 [rhte-kafka-consumer]$ mvn spring-boot:run
 ```
 # To run it on OCP
+1- Ensure you followed the steps in producer to configure strimzi and topics
+<https://raw.githubusercontent.com/rahmed-rh/rhte-kafka-producer/master/README.md>
+
+2- run the application using the fabric8 mvn plugin
+```sh
+[rhte-kafka-consumer]$ mvn clean -DskipTests fabric8:deploy -Popenshift
+```
